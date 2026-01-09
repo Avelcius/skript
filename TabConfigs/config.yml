@@ -1,0 +1,133 @@
+header-footer:
+  enabled: true
+  designs:
+    default:
+      header:
+      - '%animation:Separator%'
+      - '%animation:HGTitle%'
+      - '&6by Avellc'
+      - ''
+      - '&7TPS: %server_tps_1_colored%'
+      - ''
+      footer:
+      - ''
+      - '&7Ваша команда: %hg_color%%hg_team%'
+      - '&7Онлайн: &f%online%'
+      - ''
+      - '%animation:Separator%'
+tablist-name-formatting:
+  enabled: true
+  disable-condition: '%world%=disabledworld'
+scoreboard-teams:
+  enabled: true
+  enable-collision: true
+  invisible-nametags: false
+  sorting-types:
+  - GROUPS:owner,admin,default
+  - PLACEHOLDER_A_TO_Z:%hg_id%
+  case-sensitive-sorting: true
+  can-see-friendly-invisibles: false
+  disable-condition: '%world%=disabledworld'
+playerlist-objective:
+  enabled: false
+  value: '%ping%'
+  fancy-value: '&7%ping% ms'
+  title: Ping
+  render-type: INTEGER
+  disable-condition: '%world%=disabledworld'
+belowname-objective:
+  enabled: false
+  value: '%health%'
+  title: '&cHP'
+  fancy-value: '&c%health%'
+  fancy-value-default: '20'
+  disable-condition: '%world%=disabledworld'
+prevent-spectator-effect:
+  enabled: false
+bossbar:
+  enabled: false
+scoreboard:
+  enabled: false
+layout:
+  enabled: true
+  direction: COLUMNS
+  default-skin: mineskin:37e93c8e12cd426cb28fce31969e0674
+  enable-remaining-players-text: false
+  remaining-players-text: '... and %s more'
+  empty-slot-ping-value: 1000
+  layouts:
+    default:
+      fixed-slots:
+      - 1|%hg_teamname_red%
+      - 21|%hg_teamname_blue%
+      - 41|%hg_teamname_green%
+      - 61|%hg_teamname_yellow%
+      - 71|&8&l✦ АДМИНЫ ✦
+      groups:
+        red_team:
+          condition: '%hg_id%=red'
+          slots:
+          - 2-20
+        blue_team:
+          condition: '%hg_id%=blue'
+          slots:
+          - 22-40
+        green_team:
+          condition: '%hg_id%=green'
+          slots:
+          - 42-60
+        yellow_team:
+          condition: '%hg_id%=yellow'
+          slots:
+          - 62-70
+        staff_spectators:
+          slots:
+          - 72-80
+ping-spoof:
+  enabled: false
+global-playerlist:
+  enabled: false
+  update-latency: false
+placeholders:
+  date-format: dd.MM.yyyy
+  time-format: '[HH:mm]'
+  time-offset: 0
+  register-tab-expansion: true
+placeholder-output-replacements:
+  '%essentials_vanished%':
+    'yes': '&7| Vanished'
+    'no': ''
+conditions:
+  nick:
+    conditions:
+    - '%player%=%essentials_nickname%'
+    true: '%player%'
+    false: ~%essentials_nickname%
+placeholder-refresh-intervals:
+  default-refresh-interval: 500
+  '%server_uptime%': 1000
+  '%server_tps_1_colored%': 1000
+  '%player_health%': 200
+  '%player_ping%': 1000
+  '%vault_prefix%': 1000
+  '%hg_id%': 200
+assign-groups-by-permissions: true
+primary-group-finding-list:
+- Owner
+- Admin
+- Mod
+- default
+permission-refresh-interval: 1000
+debug: false
+mysql:
+  enabled: false
+proxy-support:
+  enabled: false
+components:
+  minimessage-support: true
+  disable-shadow-for-heads: true
+config-version: 2
+use-online-uuid-in-tablist: true
+compensate-for-packetevents-bug: false
+per-world-playerlist:
+  enabled: false

@@ -1,0 +1,6 @@
+_DEFAULT_:
+  tabprefix: "%hg_prefix%"
+  tagprefix: "%hg_prefix%"
+  # ФОРМАТ В ТАБЕ: [Префикс] Ник [Пинг]
+  # Пример: [L] Avellc 45ms
+  customtabname: "%hg_prefix%%player% &7%ping%ms"
