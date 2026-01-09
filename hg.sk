@@ -1,0 +1,435 @@
+# ==========================================
+# ОСНОВНЫЕ НАСТРОЙКИ
+# ==========================================
+options:
+    main_world: world
+    nether_world: world_nether
+    center_x: 0
+    center_z: 0
+    start_size: 5000
+    ad_open_size: 5000
+    end_size: 50
+    shrink_time: 900
+
+# ==========================================
+# ЗАГРУЗКА И КОНФИГУРАЦИЯ
+# ==========================================
+on load:
+    if {hg.state} is not set:
+        set {hg.state} to "waiting"
+    if {hg.debug} is not set:
+        set {hg.debug} to false
+
+    clear {hg.team_name::*}
+    clear {hg.team_color::*}
+    clear {hg.spawns::*}
+    clear {hg.valid_ids::*}
+
+    # --- КОМАНДА 1 (red) ---
+    set {_id} to "red"
+    set {hg.valid_ids::%{_id}%} to true
+    set {hg.team_name::%{_id}%} to "Вишневые лисички"
+    set {hg.team_color::%{_id}%} to "&c"
+    set {hg.spawns::%{_id}%::1} to location(100, 100, 0, world "{@main_world}")
+    set {hg.spawns::%{_id}%::2} to location(105, 100, 0, world "{@main_world}")
+    set {hg.spawns::%{_id}%::3} to location(110, 100, 0, world "{@main_world}")
+    set {hg.spawns::%{_id}%::4} to location(115, 100, 0, world "{@main_world}")
+
+    # --- КОМАНДА 2 (blue) ---
+    set {_id} to "blue"
+    set {hg.valid_ids::%{_id}%} to true
+    set {hg.team_name::%{_id}%} to "Ледяные драконы"
+    set {hg.team_color::%{_id}%} to "&b"
+    set {hg.spawns::%{_id}%::1} to location(-100, 100, 0, world "{@main_world}")
+    set {hg.spawns::%{_id}%::2} to location(-105, 100, 0, world "{@main_world}")
+    set {hg.spawns::%{_id}%::3} to location(-110, 100, 0, world "{@main_world}")
+    set {hg.spawns::%{_id}%::4} to location(-115, 100, 0, world "{@main_world}")
+
+    # --- КОМАНДА 3 (green) ---
+    set {_id} to "green"
+    set {hg.valid_ids::%{_id}%} to true
+    set {hg.team_name::%{_id}%} to "???"
+    set {hg.team_color::%{_id}%} to "&2"
+    set {hg.spawns::%{_id}%::1} to location(0, 100, 100, world "{@main_world}")
+    set {hg.spawns::%{_id}%::2} to location(0, 100, 105, world "{@main_world}")
+    set {hg.spawns::%{_id}%::3} to location(0, 100, 110, world "{@main_world}")
+    set {hg.spawns::%{_id}%::4} to location(0, 100, 115, world "{@main_world}")
+
+    # --- КОМАНДА 4 (yellow) ---
+    set {_id} to "yellow"
+    set {hg.valid_ids::%{_id}%} to true
+    set {hg.team_name::%{_id}%} to "Пушистые печеньки"
+    set {hg.team_color::%{_id}%} to "&e"
+    set {hg.spawns::%{_id}%::1} to location(0, 100, -100, world "{@main_world}")
+    set {hg.spawns::%{_id}%::2} to location(0, 100, -105, world "{@main_world}")
+    set {hg.spawns::%{_id}%::3} to location(0, 100, -110, world "{@main_world}")
+    set {hg.spawns::%{_id}%::4} to location(0, 100, -115, world "{@main_world}")
+
+    send "&a[HG] Config loaded. Ready." to console
+
+# ==========================================
+# ЧАСТЬ 1: УПРАВЛЕНИЕ
+# ==========================================
+
+command /hg <text> [<text>] [<text>]:
+    permission: hg.admin
+    trigger:
+        # [NEW] КОМАНДА ВЫХОДА
+        if arg-1 is "leave":
+            # Если указан аргумент 2 (/hg leave Nick) - кикаем его
+            # Если нет - кикаем себя
+            set {_p} to arg-2 parsed as player
+            if {_p} is not set:
+                set {_p} to player
+            
+            if {hg.player_id::%{_p}%} is set:
+                set {_old_id} to {hg.player_id::%{_p}%}
+                
+                # Если он был лидером - убираем лидерку
+                if {hg.leaders::%{_old_id}%} is {_p}:
+                    delete {hg.leaders::%{_old_id}%}
+                    broadcast "&e[HG] Лидер команды %{_old_id}% покинул пост."
+                
+                # Удаляем переменные -> TAB перекинет его в админы
+                delete {hg.player_id::%{_p}%}
+                delete {hg.is_leader::%{_p}%}
+                
+                send "&aИгрок %{_p}% покинул команду. Теперь он Админ/Наблюдатель." to player
+                if {_p} is not player:
+                    send "&eВы были исключены из команды." to {_p}
+            else:
+                send "&cИгрок не состоит в команде."
+
+        else if arg-1 is "debug":
+            if {hg.debug} is false:
+                set {hg.debug} to true
+                send "&a[HG] &lDEBUG MODE: ON"
+            else:
+                set {hg.debug} to false
+                send "&c[HG] &lDEBUG MODE: OFF"
+
+        else if arg-1 is "autosetup":
+            if amount of all players < 1:
+                send "&cНужны игроки онлайн!"
+                stop
+            clear {hg.player_id::*}
+            clear {hg.leaders::*}
+            clear {hg.is_leader::*}
+            set {_players::*} to all players
+            set {_players::*} to shuffled {_players::*}
+            set {_ids::*} to "red", "blue", "green" and "yellow"
+            loop {_players::*}:
+                if loop-index parsed as number <= 4:
+                    set {_p} to loop-value
+                    set {_id} to {_ids::%loop-index%}
+                    set {hg.player_id::%{_p}%} to {_id}
+                    set {hg.is_leader::%{_p}%} to true
+                    set {hg.leaders::%{_id}%} to {_p}
+                    set {_col} to {hg.team_color::%{_id}%}
+                    send "&a[AUTO] %{_p}% -> %colored {_col}%%{_id}%" to console
+                    send "&aВы лидер команды %colored {_col}%%{_id}%" to {_p}
+            send "&a[HG] Авто-распределение завершено."
+
+        else if arg-1 is "join":
+            set {_p} to arg-2 parsed as player
+            set {_id} to arg-3
+            if {_p} is set:
+                if {hg.valid_ids::%{_id}%} is set:
+                    set {hg.player_id::%{_p}%} to {_id}
+                    delete {hg.is_leader::%{_p}%}
+                    set {_name} to {hg.team_name::%{_id}%}
+                    set {_col} to {hg.team_color::%{_id}%}
+                    send "&aИгрок %{_p}% добавлен в %colored {_col}%%{_name}%" to player
+                else:
+                    send "&cНеверный ID. (red, blue, green, yellow)"
+            else:
+                send "&cИгрок не найден."
+
+        else if arg-1 is "setspawn":
+            set {_id} to arg-2
+            set {_num} to arg-3
+            if {hg.valid_ids::%{_id}%} is set:
+                if {_num} is "1" or "2" or "3" or "4":
+                    set {hg.spawns::%{_id}%::%{_num}%} to location of player
+                    send "&aСпавн ##%{_num}% для &e%{_id}% &aустановлен!"
+                else:
+                    send "&cСлот 1-4."
+            else:
+                send "&cНеверный ID."
+
+        else if arg-1 is "leader":
+            set {_p} to arg-2 parsed as player
+            if {_p} is set:
+                set {_id} to {hg.player_id::%{_p}%}
+                if {_id} is set:
+                    loop all players:
+                        if {hg.player_id::%loop-player%} is {_id}:
+                            delete {hg.is_leader::%loop-player%}
+                    set {hg.is_leader::%{_p}%} to true
+                    set {hg.leaders::%{_id}%} to {_p}
+                    set {_col} to {hg.team_color::%{_id}%}
+                    broadcast "&6Лидером %colored {_col}%%{_id}% &6назначен %{_p}%!"
+                else:
+                    send "&cУ игрока нет команды."
+            else:
+                send "&cИгрок не найден."
+                
+        else:
+            send "&6--- HG Admin v14.0 ---"
+            send "&e/hg leave [Nick] &7- Выйти из команды"
+            send "&e/hg debug"
+            send "&e/hg autosetup"
+            send "&e/hg join <Nick> <ID>"
+            send "&e/hg leader <Nick>"
+            send "&e/hgstart /hgstop"
+
+# ==========================================
+# ЧАСТЬ 2: СТАРТ
+# ==========================================
+
+command /hgstart:
+    permission: hg.admin
+    trigger:
+        if {hg.state} is not "waiting":
+            send "&cИгра уже идет!"
+            stop
+            
+        loop all players:
+            if {hg.player_id::%loop-player%} is set:
+                set {_id} to {hg.player_id::%loop-player%}
+                if {hg.leaders::%{_id}%} is not set:
+                    send "&cОШИБКА: У команды ID %{_id}% нет лидера!" to player
+                    stop
+
+        set {hg.state} to "starting"
+        
+        if {hg.debug} is true:
+            set {_time_pvp} to 10 seconds
+            set {_time_nether_open} to 10 seconds
+            set {_time_nether_close} to 10 seconds
+            set {_time_end} to 10 seconds
+            set {_shrink_duration} to 10
+        else:
+            set {_time_pvp} to 5 minutes
+            set {_time_nether_open} to 15 minutes
+            set {_time_nether_close} to 20 minutes
+            set {_time_end} to 10 minutes
+            set {_shrink_duration} to {@shrink_time}
+
+        execute console command "gamerule doImmediateRespawn true"
+        execute console command "gamerule keepInventory true"
+        execute console command "time set 0"
+        execute console command "worldborder center {@center_x} {@center_z}"
+        execute console command "worldborder set {@start_size}"
+
+        clear {_slots::*}
+        loop all players:
+            if {hg.player_id::%loop-player%} is set:
+                set {_id} to {hg.player_id::%loop-player%}
+                
+                if {_slots::%{_id}%} is not set:
+                    set {_slots::%{_id}%} to 1
+                else:
+                    add 1 to {_slots::%{_id}%}
+                set {_current_slot} to {_slots::%{_id}%}
+                if {_current_slot} > 4:
+                    set {_current_slot} to 1
+                
+                if {hg.spawns::%{_id}%::%{_current_slot}%} is set:
+                    teleport loop-player to {hg.spawns::%{_id}%::%{_current_slot}%}
+                else:
+                    teleport loop-player to {hg.spawns::%{_id}%::1}
+                
+                apply potion of slowness of tier 255 without particles to loop-player for 999 seconds
+                apply potion of jump boost of tier 250 without particles to loop-player for 999 seconds
+                apply potion of mining fatigue of tier 255 without particles to loop-player for 999 seconds
+                heal loop-player
+                set food level of loop-player to 10
+            else:
+                set gamemode of loop-player to spectator
+
+        send title "&e&lПРИГОТОВЬТЕСЬ" with subtitle "&7Читайте чат!" to all players for 2 seconds
+        broadcast ""
+        broadcast "&8&m========================================"
+        broadcast "             &6&lHUNGER GAMES"
+        broadcast "&8&m========================================"
+        play sound "ui.button.click" with volume 1 to all players
+        wait 5 seconds
+        
+        send title "&a&lМИРНОЕ ВРЕМЯ" with subtitle "&7Первые 5 минут" to all players for 2 seconds
+        broadcast ""
+        broadcast "&a&lЭТАП 1: РАЗВИТИЕ"
+        broadcast "&e1. &fPvP отключено."
+        broadcast "&e2. &fВещи не выпадают."
+        play sound "entity.experience_orb.pickup" with volume 1 to all players
+        wait 5 seconds
+        
+        send title "&4&lЗАЩИЩАЙ ЛИДЕРА" with subtitle "&7Смерть лидера = Перма-смерть" to all players for 2 seconds
+        broadcast ""
+        broadcast "&c&lГЛАВНОЕ ПРАВИЛО"
+        broadcast "&4&lЛИДЕР &f— это жизнь команды."
+        broadcast "&cУмрет Лидер — возрождения отключатся!"
+        play sound "block.note_block.pling" with volume 1 to all players
+        wait 2 seconds
+        
+        loop 3 times:
+            set {_count} to 4 - loop-number
+            send title "&c&l%{_count}%" with subtitle "" to all players for 0.5 seconds
+            broadcast "&eСтарт через: &c&l%{_count}%..."
+            play sound "ui.button.click" with volume 2 to all players
+            wait 1 second
+
+        set {hg.state} to "running"
+        set {hg.start_time} to now
+        set {hg.pvp} to false
+        set {hg.nether} to false
+        set {hg.respawn_global} to true
+        
+        loop all players:
+            if {hg.player_id::%loop-player%} is set:
+                remove slowness from loop-player
+                remove jump boost from loop-player
+                remove mining fatigue from loop-player
+                give compass to loop-player
+        
+        broadcast "&a&lИГРА НАЧАЛАСЬ! ВПЕРЕД!"
+        play sound "entity.ender_dragon.growl" with volume 1 to all players
+        
+        wait {_time_pvp}
+        if {hg.state} is "running":
+            set {hg.pvp} to true
+            execute console command "gamerule keepInventory false"
+            broadcast ""
+            broadcast "&c&lPvP ВКЛЮЧЕНО! KeepInventory ВЫКЛЮЧЕН!"
+        
+        wait {_time_nether_open}
+        if {hg.state} is "running":
+            set {hg.nether} to true
+            execute console command "worldborder set {@ad_open_size}"
+            broadcast ""
+            broadcast "&4&lАД ОТКРЫЛСЯ! &7Можно строить порталы."
+        
+        wait {_time_nether_close}
+        if {hg.state} is "running":
+            set {hg.nether} to false
+            broadcast ""
+            broadcast "&4&lАД ЗАКРЫТ! &cВсе внутри погибли."
+            loop all players:
+                if "%world of loop-player%" is "{@nether_world}":
+                    send "&cВы не успели выйти." to loop-player
+                    kill loop-player
+
+        wait {_time_end}
+        if {hg.state} is "running":
+            set {hg.respawn_global} to false
+            execute console command "worldborder set {@end_size} %{_shrink_duration}%"
+            broadcast ""
+            broadcast "&c&lСУДНАЯ НОЧЬ! &4РЕСПАВН ОТКЛЮЧЕН! &cБАРЬЕР ЕДЕТ!"
+
+# ==========================================
+# ЧАСТЬ 3: ГЕЙМПЛЕЙ
+# ==========================================
+
+on player portal:
+    if {hg.state} is "running":
+        if {hg.nether} is false:
+            cancel event
+            send "&c⛔ &lАД ЗАКРЫТ!" to player
+
+on right click with compass:
+    if {hg.state} is "running":
+        if {hg.player_id::%player%} is set:
+            set {_id} to {hg.player_id::%player%}
+            if {hg.leaders::%{_id}%} is set:
+                set compass target of player to location of {hg.leaders::%{_id}%}
+                send "&aКомпас -> Лидер." to player
+            else:
+                send "&cЛидер мертв! Компас -> Центр." to player
+                set compass target of player to location({@center_x}, 60, {@center_z}, world "{@main_world}")
+
+on damage:
+    if {hg.state} is "running":
+        if {hg.pvp} is false:
+            if attacker is a player:
+                if victim is a player:
+                    cancel event
+                    send "&c🛡 PvP отключено!" to attacker
+
+on death of player:
+    if {hg.state} is "running":
+        if {hg.player_id::%victim%} is set:
+            wait 1 tick
+            set {_id} to {hg.player_id::%victim%}
+            set {_leader} to {hg.leaders::%{_id}%}
+            
+            set {_team_name} to {hg.team_name::%{_id}%}
+            set {_col} to {hg.team_color::%{_id}%}
+            
+            if victim is {_leader}:
+                broadcast ""
+                broadcast "&4&l⚡ УБИТ ЛИДЕР %colored {_col}%%{_team_name}% &8(%victim%)!"
+                broadcast "&cТеперь игроки этой команды НЕ возрождаются!"
+                play sound "entity.lightning_bolt.thunder" with volume 100 to all players
+                delete {hg.leaders::%{_id}%}
+                set gamemode of victim to spectator
+            else:
+                if {hg.respawn_global} is true:
+                    if {hg.leaders::%{_id}%} is set:
+                        send "&eЛидер жив! Возрождение через 5 секунд..." to victim
+                        set gamemode of victim to spectator
+                        wait 5 seconds
+                        if {hg.leaders::%{_id}%} is set:
+                            set gamemode of victim to survival
+                            teleport victim to {hg.leaders::%{_id}%}
+                        else:
+                            send "&cЛидер погиб. Конец." to victim
+                    else:
+                        send "&cВаш лидер мертв. Вы выбыли." to victim
+                        set gamemode of victim to spectator
+                else:
+                    send "&cВремя вышло. Вы выбыли." to victim
+                    set gamemode of victim to spectator
+
+placeholderapi placeholder with the prefix "hg":
+    if the identifier is "team":
+        set {_id} to {hg.player_id::%player%}
+        set the result to {hg.team_name::%{_id}%} ? ""
+    
+    # ВОЗВРАЩАЕТ red, blue, green, yellow или none (ВАЖНО ДЛЯ TAB!)
+    if the identifier is "id":
+        set the result to {hg.player_id::%player%} ? "none"
+
+    if the identifier starts with "teamname_":
+        set {_target_id} to the identifier
+        replace all "teamname_" with "" in {_target_id}
+        if {hg.team_name::%{_target_id}%} is set:
+            set {_n} to {hg.team_name::%{_target_id}%}
+            set {_c} to {hg.team_color::%{_target_id}%}
+            set the result to "%colored {_c}%&l%{_n}%"
+        else:
+            set the result to "&7%{_target_id}%"
+
+    if the identifier is "color":
+        set {_id} to {hg.player_id::%player%}
+        set the result to {hg.team_color::%{_id}%} ? "&7"
+    if the identifier is "prefix":
+        set {_id} to {hg.player_id::%player%}
+        set {_c} to {hg.team_color::%{_id}%} ? "&7"
+        if {hg.is_leader::%player%} is true:
+            set the result to "%colored {_c}%[L] "
+        else:
+            set the result to colored {_c}
+
+command /hgstop:
+    permission: hg.admin
+    trigger:
+        set {hg.state} to "waiting"
+        execute console command "gamerule doImmediateRespawn false"
+        execute console command "gamerule keepInventory false"
+        broadcast "&cИгра остановлена."
+        loop all players:
+            remove slowness from loop-player
+            remove jump boost from loop-player
+            remove mining fatigue from loop-player
+            set gamemode of loop-player to survival
+            teleport loop-player to location({@center_x}, 100, {@center_z}, world "{@main_world}")
